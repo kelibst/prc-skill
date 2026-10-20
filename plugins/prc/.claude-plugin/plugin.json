@@ -1,0 +1,11 @@
+{
+  "name": "prc",
+  "description": "Project coordinator: measure progress from the tree, verify issues before they become tasks, keep a tickable plan, and orchestrate agents or write briefs. Commands: /prc-init, /prc-status, /prc-tasks, /prc-prompt.",
+  "version": "1.0.0",
+  "author": {
+    "name": "liliestechzone",
+    "email": "liliestechzone@gmail.com"
+  },
+  "license": "MIT",
+  "keywords": ["coordination", "multi-agent", "project-management", "orchestration", "tasks"]
+}

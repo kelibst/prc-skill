@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "prc-skill",
+  "description": "The PRC project-coordinator suite for Claude Code.",
+  "owner": {
+    "name": "liliestechzone",
+    "email": "liliestechzone@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "prc",
+      "description": "Project coordinator: /prc-init, /prc-status, /prc-tasks, /prc-prompt and the project-coordinator skill.",
+      "version": "1.0.0",
+      "author": { "name": "liliestechzone" },
+      "category": "productivity",
+      "source": "./plugins/prc"
+    }
+  ]
+}
