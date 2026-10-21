@@ -67,10 +67,28 @@ class LedgerTest(unittest.TestCase):
         code, out, _ = run("ledger.py", str(self.repo))
         self.assertEqual(code, 0)
         self.assertIn("Tasks  █████████░░░░░░░░░░░  3/7", out)
-        self.assertIn("REMAINING STEPS (5)", out)
+        self.assertIn("STEPS (5 left)", out)
+        self.assertIn("FOCUS  ▶ now: auth-refresh", out)
+        self.assertIn("      ✔ add refresh endpoint\n      ✔ store rotation timestamp\n      ▶ e2e test for expiry", out)
         code, out, _ = run("ledger.py", str(self.repo), "--ascii")
         self.assertIn("Tasks  #########...........", out)
         self.assertNotIn("█", out)
+        self.assertIn("[>] auth-refresh", out)
+
+    def test_focus_states(self):
+        data = self.ledger()
+        self.assertEqual(data["focus"], {"now": ["auth-refresh"], "next": ["search-index"],
+                                         "blocked": ["offline-queue"], "done": ["export-csv"]})
+        self.assertEqual([t["name"] for t in data["open"]],
+                         ["auth-refresh", "search-index", "offline-queue", "export-csv"])
+        tasks = {t["name"]: t for t in data["open"]}
+        self.assertEqual(tasks["auth-refresh"]["next_step"], "e2e test for expiry")
+
+    def test_user_step_next_blocks_the_task(self):
+        (self.repo / "work").mkdir()
+        (self.repo / "work" / "x.md").write_text("- [x] one\n- [ ] USER: sign in to the console\n", encoding="utf-8")
+        data = self.ledger("--active", "work")
+        self.assertEqual(data["open"][0]["state"], "blocked")
 
     def test_arguments_override_overlay_and_missing_dirs(self):
         (self.repo / "work").mkdir()

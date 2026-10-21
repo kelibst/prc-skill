@@ -6,29 +6,35 @@ before they become tasks, keeps one tickable plan, and either runs agents itself
 for you to hand out. It works in any repository, on Linux, macOS and Windows.
 
 ```
-LEDGER  2026-10-20   (task % counts archived files, not delivered product)
+LEDGER  2026-10-21   (task % counts archived files, not delivered product)
 Tasks  █████████░░░░░░░░░░░  3/7    43%   done / all task files
 Steps  ██████████░░░░░░░░░░  5/10   50%   ticked boxes in open tasks
 
+FOCUS  ▶ now: auth-refresh  ◻ next: search-index  ⊘ blocked: offline-queue  ✔ verify + archive: export-csv
+
 OPEN (4)
-  offline-queue  ██░░░░░░░░  1/4      60d  blocked on design  ⚠ stale
-  auth-refresh   █████░░░░░  2/4       0d  in progress
-  export-csv     ██████████  2/2       0d  done  ⚠ all ticked, not archived  ⚠ says done, still open
-  search-index   ░░░░░░░░░░  0/0       0d  not done yet  ⚠ no checkboxes
+  ▶ auth-refresh   █████░░░░░  2/4       0d  in progress
+  ◻ search-index   ░░░░░░░░░░  0/0       0d  not done yet  ⚠ no checkboxes
+  ⊘ offline-queue  ██░░░░░░░░  1/4      60d  blocked on design  ⚠ stale
+  ✔ export-csv     ██████████  2/2       0d  done  ⚠ all ticked, not archived  ⚠ says done, still open
 
-REMAINING STEPS (5)
-  offline-queue
-    [ ] queue writes while offline
-    [ ] replay on reconnect
-    [ ] doc line in README
-  auth-refresh
-    [ ] e2e test for expiry
-    [ ] USER: rotate the production signing key
+STEPS (5 left)
+  ▶ auth-refresh  2/4
+      ✔ add refresh endpoint
+      ✔ store rotation timestamp
+      ▶ e2e test for expiry
+      ◻ USER: rotate the production signing key
+  ⊘ offline-queue  1/4
+      ✔ spike IndexedDB wrapper
+      ◻ queue writes while offline
+      ◻ replay on reconnect
+      ◻ doc line in README
 
-COMPLETED (3)  latest: billing, signup, login
+COMPLETED (3)  ✔ latest: billing, signup, login
 ```
 
-*`/prc-status` opens with this dashboard.*
+*`/prc-status` opens with this dashboard: what the coordinator is on now, what's next, what's
+blocked, and every task's steps ticked off as they land. It ends with what the next run will do.*
 
 ## Install
 
@@ -79,7 +85,7 @@ without Python the skill falls back to doing the same steps by hand, which costs
 |---|---|---|---|
 | `/prc-init` | First time in a repo | Finds the task dir, plan list, decisions record, brief dir, test gate and machine facts, and writes a `COORDINATOR.md` overlay | One overlay file, which later sessions read instead of rediscovering |
 | `/prc-status` | "Where are we?" | Measures git state and counts the ledger with scripts, then reports what's verified vs. claimed | The dashboard + a read-only report. Changes nothing |
-| `/prc-tasks [issues]` | You have new work | Ask → **verify** (drops issues already built, solved, decided against or false) → plan atomic, file-disjoint tasks → write task files + briefs | Briefs to hand out (manual), or straight into the loop (orchestrate) |
+| `/prc-tasks [issues]` | You have new work | Ask → **verify** (drops issues already built, solved, decided against or false) → plan atomic, file-disjoint tasks → write task files + briefs | Straight into the loop (orchestrate), or briefs to hand out (manual) |
 | `/prc-prompt [notes]` | "Keep going" | Measures, picks 2–4 file-disjoint slices, prepares shared setup, spawns agents, verifies each diff, commits by named paths, ticks the plan | Loops until blocked on you |
 
 The `project-coordinator` skill underneath also loads by itself when you ask Claude to "coordinate",
@@ -97,9 +103,11 @@ The `project-coordinator` skill underneath also loads by itself when you ask Cla
 
 ### Two modes
 
-- **Orchestrate** (the default when Claude can spawn agents and you've said "go ahead" or "keep
-  going"): Claude runs the whole loop. Agents never commit and never edit the plan. Claude checks each
-  diff and re-runs the gate before it commits.
+- **Orchestrate** (the default whenever Claude can spawn agents): once tasks are set, Claude runs the
+  whole list without asking between rounds. It shows the focus board before each round, ticks each
+  task as it verifies it, and stops only for `USER:` steps, your decisions, or anything
+  irreversible, and keeps running the tasks that don't depend on them. Agents never commit and never
+  edit the plan. Claude checks each diff and re-runs the gate before it commits.
 - **Manual**: Claude writes each brief as a file and gives you one line per brief to paste into a
   fresh session (any agent, any machine). Use `/prc-prompt manual`.
 

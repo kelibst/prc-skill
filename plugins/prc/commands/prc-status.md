@@ -17,7 +17,9 @@ skill. This command is **read-only**: change nothing, commit nothing.
 4. Whether the last claimed gate was actually run against this tree, and with what exit code.
 
 Then read `references/report.md` and report in its `/prc-status` order. **The dashboard goes first,
-verbatim, in a code block**, followed by the named outstanding tasks, the unchecked steps and the
-completed list. Do not summarise what a status file claims.
+verbatim, in a code block**: the focus line (`▶ now` / `◻ next` / `⊘ blocked` / `✔ done`), every
+open task with its marker, each task's steps as a ✔ / ▶ / ◻ checklist, and the completed list.
+Do not summarise what a status file claims. End with **what you will do next**, in focus order, and
+the command that runs it. Don't end with a question.
 
 $ARGUMENTS

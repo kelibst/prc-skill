@@ -37,6 +37,10 @@ DATE_PREFIX = re.compile(r"^\d{4}-\d{2}-\d{2}[_-]")
 SAYS_DONE = re.compile(r"^\W*(done|complete|completed|finished|shipped|merged|closed)\b", re.IGNORECASE)
 MARKDOWN = re.compile(r"[*_`]+")
 USER_STEP = re.compile(r"(^|\W)USER\s*:")
+SAYS_BLOCKED = re.compile(r"\b(blocked|waiting|on hold|paused|parked)\b", re.IGNORECASE)
+SAYS_STARTED = re.compile(r"\b(in progress|started|wip|underway|dispatched|running)\b", re.IGNORECASE)
+# Focus order: what is moving, what is next, what is stuck, what only needs verifying and archiving.
+STATES = ("now", "next", "blocked", "done")
 
 
 def git(repo, *args):
@@ -137,6 +141,19 @@ def parse_task(path):
     return title, status, steps
 
 
+def task_state(status, steps):
+    """now / next / blocked / done, from the ticks and the Status: line."""
+    done = sum(s["done"] for s in steps)
+    if (steps and done == len(steps)) or (status and SAYS_DONE.search(status)):
+        return "done"
+    pending = [s for s in steps if not s["done"]]
+    if (status and SAYS_BLOCKED.search(status)) or (pending and pending[0]["user"]):
+        return "blocked"
+    if done or (status and SAYS_STARTED.search(status)):
+        return "now"
+    return "next"
+
+
 def short_name(path):
     return DATE_PREFIX.sub("", path.stem)
 
@@ -164,11 +181,16 @@ def build(repo, args):
             flags.append("stale")
         if not steps:
             flags.append("no checkboxes")
+        pending = [s for s in steps if not s["done"]]
         open_tasks.append({
             "name": short_name(path), "title": title, "path": path.relative_to(repo).as_posix(),
-            "status": status, "done": done, "total": len(steps), "age_days": age, "flags": flags,
-            "remaining": [{"text": s["text"], "user": s["user"]} for s in steps if not s["done"]],
+            "status": status, "state": task_state(status, steps), "done": done, "total": len(steps),
+            "age_days": age, "flags": flags,
+            "next_step": pending[0]["text"] if pending else None,
+            "steps": steps,
+            "remaining": [{"text": s["text"], "user": s["user"]} for s in pending],
         })
+    open_tasks.sort(key=lambda t: STATES.index(t["state"]))
 
     completed = []
     for path in task_files(completed_dir) if completed_dir else []:
@@ -185,6 +207,7 @@ def build(repo, args):
                   "percent": pct(len(completed), len(completed) + len(open_tasks))},
         "steps": {"done": steps_done, "total": steps_total, "percent": pct(steps_done, steps_total)},
         "open": open_tasks,
+        "focus": {state: [t["name"] for t in open_tasks if t["state"] == state] for state in STATES},
         "completed": {"count": len(completed), "recent": [n for _, _, n in completed[:args.recent]]},
     }
 
@@ -195,6 +218,10 @@ def pct(part, whole):
 
 def render(data, ascii_only, width):
     full, empty, warn, dot = ("#", ".", "!", "-") if ascii_only else ("█", "░", "⚠", "·")
+    mark = ({"now": ">", "next": "o", "blocked": "=", "done": "v", "tick": "x", "todo": " "} if ascii_only else
+            {"now": "▶", "next": "◻", "blocked": "⊘", "done": "✔", "tick": "✔", "todo": "◻"})
+    if ascii_only:
+        mark = {k: "[%s]" % v for k, v in mark.items()}
 
     def bar(part, whole, cells):
         filled = 0 if whole == 0 else round(cells * part / whole)
@@ -214,6 +241,12 @@ def render(data, ascii_only, width):
            ""]
 
     tasks = data["open"]
+    focus = data["focus"]
+    labels = {"now": "now", "next": "next", "blocked": "blocked", "done": "verify + archive"}
+    summary = "  ".join("%s %s: %s" % (mark[k], labels[k], ", ".join(focus[k])) for k in STATES if focus[k])
+    out.append("FOCUS  %s" % (summary or "nothing open"))
+    out.append("")
+
     out.append("OPEN (%d)%s" % (len(tasks), "" if tasks else "  nothing open"))
     name_w = min(28, max([len(x["name"]) for x in tasks] + [4]))
     for x in tasks:
@@ -221,22 +254,33 @@ def render(data, ascii_only, width):
         frac = "%d/%d" % (x["done"], x["total"])
         status = (x["status"] or "")[:24].ljust(24) if x["flags"] else (x["status"] or "")[:24]
         flags = "  ".join("%s %s" % (warn, f) for f in x["flags"])
-        out.append(("  %-*s  %s  %-6s %4dd  %s  %s" % (name_w, name, bar(x["done"], x["total"], 10), frac,
-                                                       x["age_days"], status, flags)).rstrip())
+        out.append(("  %s %-*s  %s  %-6s %4dd  %s  %s" % (mark[x["state"]], name_w, name, bar(x["done"], x["total"], 10),
+                                                          frac, x["age_days"], status, flags)).rstrip())
 
-    remaining = [x for x in tasks if x["remaining"]]
-    if remaining:
-        out += ["", "REMAINING STEPS (%d)" % sum(len(x["remaining"]) for x in remaining)]
-        for x in remaining:
-            out.append("  " + x["name"])
-            for step in x["remaining"]:
-                out.append("    [ ] %s%s" % (step["text"], "  (USER)" if step["user"] and "USER" not in step["text"][:6] else ""))
+    listed = [x for x in tasks if x["remaining"]]
+    if listed:
+        out += ["", "STEPS (%d left)" % sum(len(x["remaining"]) for x in listed)]
+        for x in listed:
+            out.append("  %s %s  %d/%d" % (mark[x["state"]], x["name"], x["done"], x["total"]))
+            ticked = [st for st in x["steps"] if st["done"]]
+            if len(ticked) > 3:
+                out.append("      %s %d earlier steps done" % (mark["tick"], len(ticked) - 3))
+            shown = set(id(st) for st in ticked[-3:])
+            current = x["state"] == "now"
+            for st in x["steps"]:
+                if st["done"]:
+                    if id(st) in shown:
+                        out.append("      %s %s" % (mark["tick"], st["text"]))
+                    continue
+                user = "  (USER)" if st["user"] and "USER" not in st["text"][:6] else ""
+                out.append("      %s %s%s" % (mark["now"] if current else mark["todo"], st["text"], user))
+                current = False
 
     c = data["completed"]
     out.append("")
     if c["count"]:
         older = c["count"] - len(c["recent"])
-        line = "COMPLETED (%d)  latest: %s" % (c["count"], ", ".join(c["recent"]))
+        line = "COMPLETED (%d)  %s latest: %s" % (c["count"], mark["done"], ", ".join(c["recent"]))
         if older > 0:
             line += "  %s %d older in %s/" % (dot, older, data["completed_dir"])
         out.append(line)

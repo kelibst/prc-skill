@@ -36,7 +36,8 @@ before; a read-only `/prc-status` never needs `briefs.md` or `orchestrate.md`.
 Scripts (Python 3.8+, stdlib only; run with whichever of `python3` / `python` / `py` resolves):
 
 - `scripts/measure.py [repo]`: OS, tools, git state, overlay and convention files in one call.
-- `scripts/ledger.py [repo]`: task counts, both percentages, and the progress dashboard.
+- `scripts/ledger.py [repo]`: task counts, both percentages, the focus board (now / next /
+  blocked / done) and every task's steps as a checklist.
 
 If no Python resolves, do the same steps by hand as `references/report.md` describes.
 
@@ -127,10 +128,24 @@ Durable decisions go in the project's decisions record the moment the human make
 
 ## 4 · Two modes: orchestrate (default) or manual
 
-**Orchestrate** when you can spawn agents and the human has asked you to drive (for example "keep
-going", "assign the tasks", "coordinate it"). **Manual** when you cannot spawn agents, or the human
-wants to dispatch sessions themselves. In both modes the brief is a **file**, because the file is
-the durable record of what was asked.
+**Orchestrate** whenever you can spawn agents. Setting tasks (`/prc-tasks`) or asking for a round
+(`/prc-prompt`) *is* the instruction to drive; do not wait to be told "go ahead". **Manual** only
+when you cannot spawn agents, or the human says `manual` / that they will dispatch sessions
+themselves. In both modes the brief is a **file**, because the file is the durable record of what
+was asked.
+
+**Once tasks are set, run the list on your own.** Do not end a turn with "shall I continue?",
+"want me to start?" or a menu of options. You stop only for a `USER:` step, a decision that is the
+human's (§8), or anything irreversible or outward-facing. Even then, put that one question in front
+of them and **keep running every task that doesn't depend on it**.
+
+**Show the plan, then work it.** Before you dispatch anything, print the focus board: each task in
+the round marked `▶ now`, `◻ next`, `⊘ blocked` (and on what) or `✔ done`, in the order you will
+take them, with the step each `▶` task is on. `scripts/ledger.py` prints this as its `FOCUS` and
+`STEPS` sections. If this session has a todo / task-list tool, mirror the board there too: one item
+per task, set `in_progress` when its agent starts and `completed` only after you verified it (§6).
+After each verified slice, print the updated board line so the human sees what moved and what is
+next without asking.
 
 - §4a Write the brief, §4d hand off manually: `references/briefs.md`.
 - §4b Prepare the ground, §4c the orchestrate loop: `references/orchestrate.md`.

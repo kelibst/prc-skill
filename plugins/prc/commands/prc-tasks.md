@@ -41,10 +41,12 @@ to each other. Add each task to the plan list as a checkbox (skill §3).
 
 ## 5 · Hand off
 
-**Orchestrate** (you can spawn agents and the human asked you to drive): do not stop here. Read
-`references/orchestrate.md`, prepare the ground, spawn the first round and run the loop.
+**Orchestrate** (the default whenever you can spawn agents; skill §4): do not stop here and do not
+ask whether to start. Print the focus board for the new tasks (skill §4), read
+`references/orchestrate.md`, prepare the ground, spawn the first round and run the loop until the
+list is done or every remaining task is blocked on the human.
 
-**Manual:** one dispatch line per brief (`references/briefs.md` §4d). Then close with:
+**Manual** (no agents, or the human said `manual`): one dispatch line per brief (`references/briefs.md` §4d). Then close with:
 
 - **What you dropped and why**: the issues that did not survive verification, with their evidence.
   Lead with this if anything was dropped; it is the most decision-changing thing you found.

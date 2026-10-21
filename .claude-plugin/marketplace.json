@@ -10,7 +10,7 @@
     {
       "name": "prc",
       "description": "Project coordinator: /prc-init, /prc-status, /prc-tasks, /prc-prompt and the project-coordinator skill.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": { "name": "liliestechzone" },
       "category": "productivity",
       "source": "./plugins/prc"

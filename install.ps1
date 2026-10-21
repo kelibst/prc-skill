@@ -45,7 +45,7 @@ if ($Uninstall) {
     Do-Run { Copy-Item (Join-Path $Src "skills\$s") $dest -Recurse } "copy skill $s"
   }
   foreach ($c in $Commands) { Do-Run { Copy-Item (Join-Path $Src "commands\$c") (Join-Path $Target "commands\$c") -Force } "copy command $c" }
-  Write-Host "$(if ($DryRun) {(dry run) Would install} else {Installed}) the PRC suite into ${Target}:"
+  Write-Host "$(if ($DryRun) { '(dry run) Would install' } else { 'Installed' }) the PRC suite into ${Target}:"
   Write-Host "  skill    $($Skills -join ', ')"
   Write-Host "  commands $(($Commands | ForEach-Object { '/' + ($_ -replace '\.md$','') }) -join ' ')"
   $settings = Join-Path $Home_ 'settings.json'
